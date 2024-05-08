@@ -1,0 +1,236 @@
+#include<WiFi.h>
+#include<HTTPClient.h>
+
+#include <WiFiClient.h>
+#include<DHT.h>
+#include<SPI.h>
+#include <BH1750.h>
+#include <Wire.h>
+#include <LiquidCrystal_I2C.h>
+#define FAN_PIN 27  
+
+
+
+int totalColumns = 16;
+int totalRows = 2;
+LiquidCrystal_I2C lcd(0x27, totalColumns, totalRows);
+
+#define MQ3pin 35
+#define MQ135pin 34
+#define WIFI_NETWORK "Abhishek"
+#define WIFI_PASSWORD "Abhishek@12345"
+#define WIFI_TIMEOUT_MS 20000
+#define DHTPIN 5 
+#define DHTTYPE DHT11
+BH1750 lightMeter(0x23);
+DHT dht(DHTPIN,DHTTYPE);
+
+
+
+float h = 0;
+float t = 0;
+
+const char* serverName = "http://coldstorage940.000webhostapp.com/sensordata.php";
+
+String apikey ="5fsdsf2ev5FF";
+
+void connectTOWiFi(){
+  Serial.print("connecting to WiFi");
+  WiFi.mode(WIFI_STA);
+  WiFi.begin(WIFI_NETWORK,WIFI_PASSWORD);
+
+  unsigned long startAttemptTime = millis();
+  
+  while(WiFi.status()!=WL_CONNECTED && (millis()-startAttemptTime) < WIFI_TIMEOUT_MS)
+  {
+    Serial.print(".");
+    delay(500);
+  }
+  if(WiFi.status()!=WL_CONNECTED)
+  {
+    Serial.println("Failed ");
+    //take action
+    
+  }
+  else
+  {
+    Serial.println("Connected ");
+    Serial.println(WiFi.localIP());
+  }
+  }
+void setup() {
+  Serial.begin(9600);
+  pinMode(FAN_PIN, OUTPUT);
+  digitalWrite(FAN_PIN, LOW);
+  
+   
+
+  dht.begin();
+
+  connectTOWiFi();
+  Wire.begin();
+  lightMeter.begin();
+
+lcd.init(); 
+lcd.backlight(); 
+
+Wire.begin();
+lcd.setCursor(0, 0);
+    lcd.print("Smart Cold");
+    delay(1500);
+    lcd.setCursor(0, 1);
+    lcd.print("Storage System");
+    delay(1500);
+    lcd.clear();
+
+    lcd.setCursor(0, 0);
+    lcd.print("Group Members");
+    delay(1500);
+    lcd.setCursor(0, 1);
+    lcd.print("Names");
+    delay(1500);
+    lcd.clear();
+    
+    lcd.setCursor(0, 0);
+    lcd.print("Abhishek");
+    lcd.setCursor(0, 1);
+    lcd.print("Chourasia");
+    delay(1500);
+    lcd.clear();
+    
+    lcd.setCursor(0, 0);
+    lcd.print("Sarthak ");
+    lcd.setCursor(0, 1);
+    lcd.print("Singh");
+    delay(1500);
+    lcd.clear();
+    
+
+    
+    lcd.setCursor(0, 0);
+    lcd.print("Vishwajeet");
+   lcd.setCursor(0, 1);
+    lcd.print("Singh");
+    delay(1500);
+    lcd.clear();
+    
+    
+
+    lcd.setCursor(0, 0);
+    lcd.print("Khushboo");
+    lcd.setCursor(0, 1);
+    lcd.print("Joshi");
+    delay(1500);
+    lcd.clear();
+
+}
+void loop() {
+   
+     
+    
+   
+  if(WiFi.status()==WL_CONNECTED)
+  {
+    WiFiClient client;
+    HTTPClient http;
+    float t= dht.readTemperature();
+    Serial.print("Temperature is : ");
+    Serial.print(t-4);
+    Serial.println(" °C");
+    
+    float h= dht.readHumidity();
+    Serial.print("Humidity is : ");
+    Serial.print(h);
+    Serial.println(" %");
+    
+    float p = analogRead(MQ3pin); // read analog input pin 0
+    Serial.print("MQ3 Sensor Value: ");
+	  Serial.print(p);
+    Serial.println(" ppm");
+
+    float s = analogRead(MQ135pin); // read analog input pin 0
+    Serial.print("MQ135 Sensor Value: ");
+	  Serial.print(s);
+    Serial.println(" ppm");
+
+    float l = lightMeter.readLightLevel();
+    Serial.print("Light sensor value is : ");
+    Serial.print(l);
+    Serial.println(" lx");
+    
+
+if (t>33 or s>500 )
+  {
+    digitalWrite(FAN_PIN, HIGH);
+   
+}
+  else {
+    digitalWrite(FAN_PIN, LOW);
+ 
+    
+  } 
+
+ 
+
+ 
+
+lcd.setCursor(0, 0);
+lcd.print("HUMIDITY");
+
+lcd.setCursor(0,1);
+lcd.print(h);
+delay(1500);
+lcd.clear();
+
+lcd.setCursor(0, 0);
+lcd.print("TEMPERATURE");
+
+lcd.setCursor(0,1);
+lcd.print(t-4);
+delay(1500);
+lcd.clear();
+
+lcd.setCursor(0, 0);
+lcd.print("EHYLENE CONCENTRA");
+lcd.setCursor(0,1);
+lcd.print(p);
+delay(1500);
+lcd.clear(); 
+
+lcd.setCursor(0, 0);
+lcd.print("CO2 CONCENTRATION");
+
+lcd.setCursor(0,1);
+lcd.print(s);
+delay(1500);
+lcd.clear();
+
+lcd.setCursor(0, 0);
+lcd.print("LIGHT INTENSITY");
+
+lcd.setCursor(0,1);
+lcd.print(l);
+delay(1500);
+lcd.clear();
+
+ if(isnan(t) || isnan(h)||isnan(p) || isnan(s) || isnan(l)  )
+    {
+      Serial.println(F("Failed to read from sensor "));
+      return;
+    }
+    http.begin(client,serverName);
+    http.addHeader("Content-Type","application/x-www-form-urlencoded");
+    String httpRequestData ="api_key="+ apikey + "&temperature=" + String(t-4)+"&humidity=" + String(h)+"&ethylene=" + String(p)+"&co2=" + String(s)+"&light=" + String(l) ;
+    int httpResponseCode = http.POST(httpRequestData);
+ 
+    Serial.print("HTTP Response code: ");
+    Serial.println(httpResponseCode);
+    http.end();
+      } 
+    else
+    {
+      Serial.println("WiFi Disconnected");
+    }
+  
+
+}
